@@ -44,16 +44,19 @@ fn main() {
 
     gl::load_with(|symbol| window.get_proc_address(symbol) as *const _);
 
-    let vertices: [f32; 18] = [
+    let vertices_1: [f32; 9] = [
         0.5, 0.5, 0.0, // top right
         0.5, -0.5, 0.0, // bottom right
         -0.5, -0.5, 0.0, // bottom left
+    ];
+
+    let vertices_2: [f32; 9] = [
         -0.5, 0.5, 0.0, // top left
         -0.5, -0.5, 0.0, // bottom left
         0.5, 0.5, 0.0, // top right
     ];
 
-    let (shader_program, vao) = unsafe {
+    let (shader_program, vaos) = unsafe {
         let vertex_shader = gl::CreateShader(gl::VERTEX_SHADER);
         let c_vert = CString::new(VERTEX_SHADER_SOURCE.as_bytes()).unwrap();
         gl::ShaderSource(vertex_shader, 1, &c_vert.as_ptr(), std::ptr::null());
@@ -125,25 +128,20 @@ fn main() {
         gl::DeleteShader(vertex_shader);
         gl::DeleteShader(fragment_shader);
 
-        let mut vbo = 42;
-        let mut vao = 42;
+        let mut vaos = [0, 0];
+        let mut vbos = [0, 0];
 
-        gl::GenVertexArrays(1, &mut vao);
-        gl::GenBuffers(1, &mut vbo);
+        gl::GenVertexArrays(2, vaos.as_mut_ptr());
+        gl::GenBuffers(2, vbos.as_mut_ptr());
 
-        // bind vao to store vertex state
-        gl::BindVertexArray(vao);
-
-        // copy our vertices array in a buffer for opengl to use
-        gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
+        gl::BindVertexArray(vaos[0]);
+        gl::BindBuffer(gl::ARRAY_BUFFER, vbos[0]);
         gl::BufferData(
             gl::ARRAY_BUFFER,
-            (vertices.len() * std::mem::size_of::<GLfloat>()) as GLsizeiptr,
-            &vertices[0] as *const f32 as *const c_void,
+            std::mem::size_of_val(&vertices_1) as GLsizeiptr,
+            &vertices_1[0] as *const f32 as *const c_void,
             gl::STATIC_DRAW,
         );
-
-        // then set the vertex attributes pointers
         gl::VertexAttribPointer(
             0,
             3,
@@ -154,9 +152,29 @@ fn main() {
         );
         gl::EnableVertexAttribArray(0);
 
+        gl::BindVertexArray(vaos[1]);
+        gl::BindBuffer(gl::ARRAY_BUFFER, vbos[1]);
+        gl::BufferData(
+            gl::ARRAY_BUFFER,
+            std::mem::size_of_val(&vertices_2) as GLsizeiptr,
+            &vertices_2[0] as *const f32 as *const c_void,
+            gl::STATIC_DRAW,
+        );
+        gl::VertexAttribPointer(
+            0,
+            3,
+            gl::FLOAT,
+            gl::FALSE,
+            3 * std::mem::size_of::<gl::types::GLfloat>() as GLsizei,
+            std::ptr::null(),
+        );
+        gl::EnableVertexAttribArray(0);
+
+        gl::BindVertexArray(0);
+
         gl::PolygonMode(gl::FRONT_AND_BACK, gl::LINE);
 
-        (shader_program, vao)
+        (shader_program, vaos)
     };
 
     while !window.should_close() {
@@ -169,8 +187,13 @@ fn main() {
             gl::Clear(gl::COLOR_BUFFER_BIT);
 
             gl::UseProgram(shader_program);
-            gl::BindVertexArray(vao);
-            gl::DrawArrays(gl::TRIANGLES, 0, 6);
+
+            gl::BindVertexArray(vaos[0]);
+            gl::DrawArrays(gl::TRIANGLES, 0, 3);
+
+            gl::BindVertexArray(vaos[1]);
+            gl::DrawArrays(gl::TRIANGLES, 0, 3);
+
             gl::BindVertexArray(0);
         }
 
