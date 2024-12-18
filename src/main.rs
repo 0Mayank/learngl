@@ -44,16 +44,13 @@ fn main() {
 
     gl::load_with(|symbol| window.get_proc_address(symbol) as *const _);
 
-    let vertices: [f32; 12] = [
+    let vertices: [f32; 18] = [
         0.5, 0.5, 0.0, // top right
         0.5, -0.5, 0.0, // bottom right
         -0.5, -0.5, 0.0, // bottom left
         -0.5, 0.5, 0.0, // top left
-    ];
-
-    let indices: [u32; 6] = [
-        0, 1, 3, // first triangle
-        1, 2, 3, // second triangle
+        -0.5, -0.5, 0.0, // bottom left
+        0.5, 0.5, 0.0, // top right
     ];
 
     let (shader_program, vao) = unsafe {
@@ -130,11 +127,9 @@ fn main() {
 
         let mut vbo = 42;
         let mut vao = 42;
-        let mut ebo = 42;
 
         gl::GenVertexArrays(1, &mut vao);
         gl::GenBuffers(1, &mut vbo);
-        gl::GenBuffers(1, &mut ebo);
 
         // bind vao to store vertex state
         gl::BindVertexArray(vao);
@@ -145,14 +140,6 @@ fn main() {
             gl::ARRAY_BUFFER,
             (vertices.len() * std::mem::size_of::<GLfloat>()) as GLsizeiptr,
             &vertices[0] as *const f32 as *const c_void,
-            gl::STATIC_DRAW,
-        );
-
-        gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ebo);
-        gl::BufferData(
-            gl::ELEMENT_ARRAY_BUFFER,
-            (indices.len() * std::mem::size_of::<GLfloat>()) as GLsizeiptr,
-            &indices[0] as *const u32 as *const c_void,
             gl::STATIC_DRAW,
         );
 
@@ -183,7 +170,7 @@ fn main() {
 
             gl::UseProgram(shader_program);
             gl::BindVertexArray(vao);
-            gl::DrawElements(gl::TRIANGLES, 6, gl::UNSIGNED_INT, std::ptr::null());
+            gl::DrawArrays(gl::TRIANGLES, 0, 6);
             gl::BindVertexArray(0);
         }
 
