@@ -3,7 +3,7 @@ use std::{
     sync::mpsc::Receiver,
 };
 
-use gl::types::{GLchar, GLfloat, GLsizei, GLsizeiptr};
+use gl::types::{GLchar, GLsizei, GLsizeiptr};
 use glfw::Context;
 
 const VERTEX_SHADER_SOURCE: &str = r#"
@@ -15,12 +15,21 @@ const VERTEX_SHADER_SOURCE: &str = r#"
     }
 "#;
 
-const FRAGMENT_SHADER_SOURCE: &str = r#"
+const FRAGMENT_SHADER_SOURCE_ORANGE: &str = r#"
     #version 330 core
     out vec4 FragColor;
 
     void main() {
         FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);
+    }
+"#;
+
+const FRAGMENT_SHADER_SOURCE_YELLOW: &str = r#"
+    #version 330 core
+    out vec4 FragColor;
+
+    void main() {
+        FragColor = vec4(1.0f, 1.0f, 0.0f, 1.0f);
     }
 "#;
 
@@ -56,16 +65,31 @@ fn main() {
         0.5, 0.5, 0.0, // top right
     ];
 
-    let (shader_program, vaos) = unsafe {
+    let (shader_program_orange, shader_program_yellow, vaos) = unsafe {
         let vertex_shader = gl::CreateShader(gl::VERTEX_SHADER);
         let c_vert = CString::new(VERTEX_SHADER_SOURCE.as_bytes()).unwrap();
         gl::ShaderSource(vertex_shader, 1, &c_vert.as_ptr(), std::ptr::null());
         gl::CompileShader(vertex_shader);
 
-        let fragment_shader = gl::CreateShader(gl::FRAGMENT_SHADER);
-        let c_frag = CString::new(FRAGMENT_SHADER_SOURCE.as_bytes()).unwrap();
-        gl::ShaderSource(fragment_shader, 1, &c_frag.as_ptr(), std::ptr::null());
-        gl::CompileShader(fragment_shader);
+        let fragment_shader_orange = gl::CreateShader(gl::FRAGMENT_SHADER);
+        let c_frag = CString::new(FRAGMENT_SHADER_SOURCE_ORANGE.as_bytes()).unwrap();
+        gl::ShaderSource(
+            fragment_shader_orange,
+            1,
+            &c_frag.as_ptr(),
+            std::ptr::null(),
+        );
+        gl::CompileShader(fragment_shader_orange);
+
+        let fragment_shader_yellow = gl::CreateShader(gl::FRAGMENT_SHADER);
+        let c_frag = CString::new(FRAGMENT_SHADER_SOURCE_YELLOW.as_bytes()).unwrap();
+        gl::ShaderSource(
+            fragment_shader_yellow,
+            1,
+            &c_frag.as_ptr(),
+            std::ptr::null(),
+        );
+        gl::CompileShader(fragment_shader_yellow);
 
         let mut success = 42;
         let mut info_log = vec![0; 512];
@@ -86,31 +110,68 @@ fn main() {
             return;
         }
 
-        gl::GetShaderiv(fragment_shader, gl::COMPILE_STATUS, &mut success);
+        gl::GetShaderiv(fragment_shader_orange, gl::COMPILE_STATUS, &mut success);
         if success != gl::TRUE.into() {
             gl::GetShaderInfoLog(
-                fragment_shader,
+                fragment_shader_orange,
                 512,
                 std::ptr::null_mut(),
                 info_log.as_mut_ptr() as *mut GLchar,
             );
             eprintln!(
-                "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n{}",
+                "ERROR::SHADER::FRAGMENT::ORANGE::COMPILATION_FAILED\n{}",
                 String::from_utf8_lossy(&info_log)
             );
             info_log.clear();
             return;
         }
 
-        let shader_program = gl::CreateProgram();
-        gl::AttachShader(shader_program, vertex_shader);
-        gl::AttachShader(shader_program, fragment_shader);
-        gl::LinkProgram(shader_program);
+        gl::GetShaderiv(fragment_shader_yellow, gl::COMPILE_STATUS, &mut success);
+        if success != gl::TRUE.into() {
+            gl::GetShaderInfoLog(
+                fragment_shader_yellow,
+                512,
+                std::ptr::null_mut(),
+                info_log.as_mut_ptr() as *mut GLchar,
+            );
+            eprintln!(
+                "ERROR::SHADER::FRAGMENT::YELLOW::COMPILATION_FAILED\n{}",
+                String::from_utf8_lossy(&info_log)
+            );
+            info_log.clear();
+            return;
+        }
 
-        gl::GetProgramiv(shader_program, gl::LINK_STATUS, &mut success);
+        let shader_program_orange = gl::CreateProgram();
+        gl::AttachShader(shader_program_orange, vertex_shader);
+        gl::AttachShader(shader_program_orange, fragment_shader_orange);
+        gl::LinkProgram(shader_program_orange);
+
+        let shader_program_yellow = gl::CreateProgram();
+        gl::AttachShader(shader_program_yellow, vertex_shader);
+        gl::AttachShader(shader_program_yellow, fragment_shader_yellow);
+        gl::LinkProgram(shader_program_yellow);
+
+        gl::GetProgramiv(shader_program_orange, gl::LINK_STATUS, &mut success);
         if success != gl::TRUE.into() {
             gl::GetProgramInfoLog(
-                shader_program,
+                shader_program_orange,
+                512,
+                std::ptr::null_mut(),
+                info_log.as_mut_ptr() as *mut GLchar,
+            );
+            eprintln!(
+                "ERROR::PROGRAM::LINKING_FAILED\n{}",
+                String::from_utf8_lossy(&info_log)
+            );
+            info_log.clear();
+            return;
+        }
+
+        gl::GetProgramiv(shader_program_yellow, gl::LINK_STATUS, &mut success);
+        if success != gl::TRUE.into() {
+            gl::GetProgramInfoLog(
+                shader_program_yellow,
                 512,
                 std::ptr::null_mut(),
                 info_log.as_mut_ptr() as *mut GLchar,
@@ -126,7 +187,8 @@ fn main() {
         // We no longer need shader objects after linking them with the
         // program object
         gl::DeleteShader(vertex_shader);
-        gl::DeleteShader(fragment_shader);
+        gl::DeleteShader(fragment_shader_orange);
+        gl::DeleteShader(fragment_shader_yellow);
 
         let mut vaos = [0, 0];
         let mut vbos = [0, 0];
@@ -172,9 +234,9 @@ fn main() {
 
         gl::BindVertexArray(0);
 
-        gl::PolygonMode(gl::FRONT_AND_BACK, gl::LINE);
+        //gl::PolygonMode(gl::FRONT_AND_BACK, gl::LINE);
 
-        (shader_program, vaos)
+        (shader_program_orange, shader_program_yellow, vaos)
     };
 
     while !window.should_close() {
@@ -186,11 +248,11 @@ fn main() {
             gl::ClearColor(0.2, 0.3, 0.3, 1.0);
             gl::Clear(gl::COLOR_BUFFER_BIT);
 
-            gl::UseProgram(shader_program);
-
+            gl::UseProgram(shader_program_orange);
             gl::BindVertexArray(vaos[0]);
             gl::DrawArrays(gl::TRIANGLES, 0, 3);
 
+            gl::UseProgram(shader_program_yellow);
             gl::BindVertexArray(vaos[1]);
             gl::DrawArrays(gl::TRIANGLES, 0, 3);
 
