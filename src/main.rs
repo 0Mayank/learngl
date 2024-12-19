@@ -1,10 +1,8 @@
-use std::{
-    ffi::{c_void, CString},
-    sync::mpsc::Receiver,
-};
+use std::{ffi::c_void, sync::mpsc::Receiver};
 
-use gl::types::{GLchar, GLfloat, GLsizei, GLsizeiptr};
+use gl::types::{GLfloat, GLsizei, GLsizeiptr};
 use glfw::Context;
+use learngl::shader::{Shader, ShaderProgram, ShaderType};
 
 const VERTEX_SHADER_SOURCE: &str = r#"
     #version 330 core
@@ -56,78 +54,16 @@ fn main() {
         -0.5, -0.5, 0.0, 0.0, 0.0, 1.0, // bottom left
     ];
 
-    let (shader_program, vao) = unsafe {
-        let vertex_shader = gl::CreateShader(gl::VERTEX_SHADER);
-        let c_vert = CString::new(VERTEX_SHADER_SOURCE.as_bytes()).unwrap();
-        gl::ShaderSource(vertex_shader, 1, &c_vert.as_ptr(), std::ptr::null());
-        gl::CompileShader(vertex_shader);
+    let vertex_shader = Shader::from_str(VERTEX_SHADER_SOURCE, ShaderType::VertexShader).unwrap();
+    let fragment_shader =
+        Shader::from_str(FRAGMENT_SHADER_SOURCE, ShaderType::FragmentShader).unwrap();
+    let shader_program = ShaderProgram::builder()
+        .attach_shader(&vertex_shader)
+        .attach_shader(&fragment_shader)
+        .build()
+        .unwrap();
 
-        let fragment_shader = gl::CreateShader(gl::FRAGMENT_SHADER);
-        let c_frag = CString::new(FRAGMENT_SHADER_SOURCE.as_bytes()).unwrap();
-        gl::ShaderSource(fragment_shader, 1, &c_frag.as_ptr(), std::ptr::null());
-        gl::CompileShader(fragment_shader);
-
-        let mut success = 42;
-        let mut info_log = vec![0; 512];
-
-        gl::GetShaderiv(vertex_shader, gl::COMPILE_STATUS, &mut success);
-        if success != gl::TRUE.into() {
-            gl::GetShaderInfoLog(
-                vertex_shader,
-                512,
-                std::ptr::null_mut(),
-                info_log.as_mut_ptr() as *mut GLchar,
-            );
-            eprintln!(
-                "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n{}",
-                String::from_utf8_lossy(&info_log)
-            );
-            info_log.clear();
-            return;
-        }
-
-        gl::GetShaderiv(fragment_shader, gl::COMPILE_STATUS, &mut success);
-        if success != gl::TRUE.into() {
-            gl::GetShaderInfoLog(
-                fragment_shader,
-                512,
-                std::ptr::null_mut(),
-                info_log.as_mut_ptr() as *mut GLchar,
-            );
-            eprintln!(
-                "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n{}",
-                String::from_utf8_lossy(&info_log)
-            );
-            info_log.clear();
-            return;
-        }
-
-        let shader_program = gl::CreateProgram();
-        gl::AttachShader(shader_program, vertex_shader);
-        gl::AttachShader(shader_program, fragment_shader);
-        gl::LinkProgram(shader_program);
-
-        gl::GetProgramiv(shader_program, gl::LINK_STATUS, &mut success);
-        if success != gl::TRUE.into() {
-            gl::GetProgramInfoLog(
-                shader_program,
-                512,
-                std::ptr::null_mut(),
-                info_log.as_mut_ptr() as *mut GLchar,
-            );
-            eprintln!(
-                "ERROR::PROGRAM::LINKING_FAILED\n{}",
-                String::from_utf8_lossy(&info_log)
-            );
-            info_log.clear();
-            return;
-        }
-
-        // We no longer need shader objects after linking them with the
-        // program object
-        gl::DeleteShader(vertex_shader);
-        gl::DeleteShader(fragment_shader);
-
+    let vao = unsafe {
         let mut vao = 0;
         let mut vbo = 0;
 
@@ -167,7 +103,7 @@ fn main() {
 
         //gl::PolygonMode(gl::FRONT_AND_BACK, gl::LINE);
 
-        (shader_program, vao)
+        vao
     };
 
     while !window.should_close() {
@@ -179,7 +115,7 @@ fn main() {
             gl::ClearColor(0.2, 0.3, 0.3, 1.0);
             gl::Clear(gl::COLOR_BUFFER_BIT);
 
-            gl::UseProgram(shader_program);
+            shader_program.use_program();
             gl::BindVertexArray(vao);
             gl::DrawArrays(gl::TRIANGLES, 0, 3);
 
