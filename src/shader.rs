@@ -4,9 +4,10 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use gl::types::GLchar;
-
-use crate::errors::{GLWError, GLWErrorExt, GLWErrorKind};
+use crate::{
+    errors::{GLWError, GLWErrorKind},
+    utils,
+};
 
 #[derive(Debug, Clone, Copy)]
 pub enum ShaderType {
@@ -106,24 +107,12 @@ impl Shader {
     /// # Safety
     /// shader_id should be valid
     pub unsafe fn check_succes(shader_id: u32, path: Option<&Path>) -> Result<(), GLWError> {
-        let mut success = 42;
-        let mut info_log = vec![0; 512];
-
-        gl::GetShaderiv(shader_id, gl::COMPILE_STATUS, &mut success);
-        if success != gl::TRUE.into() {
-            gl::GetShaderInfoLog(
-                shader_id,
-                512,
-                std::ptr::null_mut(),
-                info_log.as_mut_ptr() as *mut gl::types::GLchar,
-            );
-            return Err(GLWErrorKind::ShaderCompilationFailed(
-                path.map(|p| p.to_path_buf()),
-            ))
-            .info(String::from_utf8_lossy(&info_log).to_string());
-        }
-
-        Ok(())
+        utils::check_shader_succes(shader_id, gl::COMPILE_STATUS).map_err(|info| {
+            GLWError::new(
+                GLWErrorKind::ShaderCompilationFailed(path.map(|p| p.to_path_buf())),
+                info,
+            )
+        })
     }
 }
 
@@ -202,22 +191,8 @@ impl<'a> ShaderProgramBuilder<'a> {
 
             gl::LinkProgram(shader_program_id);
 
-            let mut success = 42;
-            let mut info_log = vec![0; 512];
-
-            gl::GetProgramiv(shader_program_id, gl::LINK_STATUS, &mut success);
-            if success != gl::TRUE.into() {
-                gl::GetProgramInfoLog(
-                    shader_program_id,
-                    512,
-                    std::ptr::null_mut(),
-                    info_log.as_mut_ptr() as *mut GLchar,
-                );
-                return Err(GLWError::new(
-                    GLWErrorKind::ShaderProgramLinkingFailed,
-                    String::from_utf8_lossy(&info_log).to_string(),
-                ));
-            };
+            utils::check_program_success(shader_program_id, gl::LINK_STATUS)
+                .map_err(|info| GLWError::new(GLWErrorKind::ShaderProgramLinkingFailed, info))?;
 
             shader_program_id
         };
