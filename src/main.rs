@@ -2,30 +2,7 @@ use std::{ffi::c_void, sync::mpsc::Receiver};
 
 use gl::types::{GLfloat, GLsizei, GLsizeiptr};
 use glfw::Context;
-use learngl::shader::{Shader, ShaderProgram, ShaderType};
-
-const VERTEX_SHADER_SOURCE: &str = r#"
-    #version 330 core
-    layout (location = 0) in vec3 aPos;
-    layout (location = 1) in vec3 aColor;
-
-    out vec3 ourColor;
-
-    void main() {
-        gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
-        ourColor = aColor;
-    }
-"#;
-
-const FRAGMENT_SHADER_SOURCE: &str = r#"
-    #version 330 core
-    out vec4 FragColor;
-    in vec3 ourColor;
-
-    void main() {
-        FragColor = vec4(ourColor, 1.0);
-    }
-"#;
+use learngl::shader::{Shader, ShaderProgram};
 
 fn main() {
     let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
@@ -54,9 +31,8 @@ fn main() {
         -0.5, -0.5, 0.0, 0.0, 0.0, 1.0, // bottom left
     ];
 
-    let vertex_shader = Shader::from_str(VERTEX_SHADER_SOURCE, ShaderType::VertexShader).unwrap();
-    let fragment_shader =
-        Shader::from_str(FRAGMENT_SHADER_SOURCE, ShaderType::FragmentShader).unwrap();
+    let vertex_shader = Shader::from_path("shaders/shader.vs").unwrap();
+    let fragment_shader = Shader::from_path("shaders/shader.fs").unwrap();
     let shader_program = ShaderProgram::builder()
         .attach_shader(&vertex_shader)
         .attach_shader(&fragment_shader)
