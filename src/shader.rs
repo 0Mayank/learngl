@@ -140,6 +140,23 @@ impl ShaderProgram {
             gl::UseProgram(self.shader_program_id);
         }
     }
+
+    // TODO: add a version using 'glsl' parser crate
+    // which detects type of uniform from the shader
+    // (probably should be in ShaderProgramBuilder)
+
+    pub fn get_uniform<T>(&self, name: impl AsRef<str>) -> Result<Uniform<T>, GLWError> {
+        unsafe {
+            let cstr_name = CString::new(name.as_ref())?;
+            let uniform_location =
+                gl::GetUniformLocation(self.shader_program_id, cstr_name.as_ptr());
+            if uniform_location == -1 {
+                todo!()
+            }
+        }
+
+        todo!()
+    }
 }
 
 impl Drop for ShaderProgram {
@@ -204,5 +221,17 @@ impl<'a> ShaderProgramBuilder<'a> {
 impl Default for ShaderProgramBuilder<'_> {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+pub struct Uniform<T> {
+    name: String,
+    location: u32,
+    phantom: std::marker::PhantomData<T>,
+}
+
+impl Uniform<u32> {
+    pub fn set(&self, value: bool) {
+        todo!()
     }
 }

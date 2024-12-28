@@ -31,11 +31,9 @@ fn main() {
         -0.5, -0.5, 0.0, 0.0, 0.0, 1.0, // bottom left
     ];
 
-    let vertex_shader = Shader::from_path("shaders/shader.vs").unwrap();
-    let fragment_shader = Shader::from_path("shaders/shader.fs").unwrap();
     let shader_program = ShaderProgram::builder()
-        .attach_shader(&vertex_shader)
-        .attach_shader(&fragment_shader)
+        .attach_shader_path("shaders/shader.vs")
+        .attach_shader_path("shaders/shader.fs")
         .build()
         .unwrap();
 

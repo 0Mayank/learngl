@@ -1,3 +1,5 @@
 pub mod errors;
-pub mod shader;
 pub mod utils;
+
+pub mod shader;
+pub mod types;
