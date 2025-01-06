@@ -104,6 +104,18 @@ impl Shader {
         })
     }
 
+    pub fn get_uniform_location(&self, name: impl AsRef<str>) -> Result<i32, GLWError> {
+        // TODO: copying?
+        let c_name = CString::new(name.as_ref())?;
+
+        let location = unsafe { gl::GetUniformLocation(self.shader_id, c_name.as_ptr()) };
+        if location == -1 {
+            Err(GLWErrorKind::UniformNotFound(name.as_ref().to_string()))?;
+        }
+
+        Ok(location)
+    }
+
     /// # Safety
     /// shader_id should be valid
     pub unsafe fn check_succes(shader_id: u32, path: Option<&Path>) -> Result<(), GLWError> {

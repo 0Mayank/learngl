@@ -36,6 +36,8 @@ pub enum GLWErrorKind {
     ShaderProgramLinkingFailed,
     #[error(transparent)]
     CStringNulError(#[from] std::ffi::NulError),
+    #[error("Uniform not found: {0}")]
+    UniformNotFound(String),
 }
 
 impl<T> From<T> for GLWError
